@@ -1,0 +1,3 @@
+# BogoMips
+
+*Documentation goes here.*
