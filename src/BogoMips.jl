@@ -7,6 +7,8 @@ using Printf
 # using CpuId: cpucycle
 # cupcyclejl() = CpuId.cpucycle()
 
+alwaysinitGhz=true;
+
 cpuGhz = nothing;
 cur_cpu = nothing;
 
@@ -22,7 +24,7 @@ function initGhz(verbose=false)
   end # for
   cpuMhz = the_cpu_info[cur_cpu].speed
   cpuGhz = cpuMhz*0.001
-  if verbose; println("$cpuGhz Ghz on cpu $cur_cpu."); end
+  if verbose; println("initGhz : $(round(cpuGhz,digits=1)) Ghz on cpu $cur_cpu."); end
 end
 
 cpucyclejl() = convert(UInt64,floor(time_ns()*cpuGhz))
@@ -43,9 +45,12 @@ end
    . if verbose is false (default), return computed bogomips value
 """
 function bogomips(verbose=false)
+  if alwaysinitGhz
+    initGhz(verbose)
+  end
   if verbose
     print("Calibrating delay loop..")
-    print("(on cpu $cur_cpu)")
+    print("(cpu$(cur_cpu)@$(round(cpuGhz,digits=1))Ghz)..")
   end
   loops_to_do=1
   done=false

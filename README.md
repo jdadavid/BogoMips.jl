@@ -14,3 +14,22 @@
 -->
 # BogoMips.jl
 Compute BogoMips in pure Julia
+Usage : 
+either, inside Julia REPL, 
+
+  add the package
+      ]add https://github.com/jdadavid/BogoMips.jl.git
+    or 
+      import Pkg; Pkg.add(url="https://github.com/jdadavid/BogoMips.jl.git")
+  and then call
+     using BogoMips
+     bogomips(true) # prints the bogomips
+     # or 
+     bg=bogomips(false); println("Computed :"*round(bg,digits=2) * "bogomips.")
+     # or
+     bg=bogomips(); println("Computed :"*round(bg,digits=2) * "bogomips.")
+
+or, in command line :
+
+  cd BogoMips.jl
+  julia -q -e 'include("src/BogoMips.jl");using .BogoMips;bogomips(true)'
