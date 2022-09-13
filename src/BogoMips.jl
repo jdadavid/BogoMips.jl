@@ -7,24 +7,25 @@ using Printf
 # using CpuId: cpucycle
 # cupcyclejl() = CpuId.cpucycle()
 
-cur_cpucycle=0;
+cpuGhz = nothing;
+cur_cpu = nothing;
 
-function init_cpucycle(verbose=false)
+function initGhz(verbose=false)
+  global cur_cpu
+  global cpuGhz
   the_cpu_info=Sys.cpu_info()
   cur_cpu=firstindex(the_cpu_info)
   for i = eachindex(the_cpu_info)
-    # global cur_cpu
     if the_cpu_info[i].speed > the_cpu_info[cur_cpu].speed
       cur_cpu=i
     end # if
   end # for
-  if verbose; print("(on cpu $curcpu)"); end
-  const cpuMhz = the_cpu_info[curcpu].speed
-  const cpuGhz = cpuMhz*0.001
-  global cur_cpucycle=convert(UInt64,floor(time_ns()*cpuGhz))
+  cpuMhz = the_cpu_info[cur_cpu].speed
+  cpuGhz = cpuMhz*0.001
+  if verbose; println("$cpuGhz Ghz on cpu $cur_cpu."); end
 end
-cpucyclejl()   = cur_cpucycle;
 
+cpucyclejl() = convert(UInt64,floor(time_ns()*cpuGhz))
 
 function delayrt(cycles)
   c0=cpucyclejl()
@@ -35,13 +36,17 @@ function delayrt(cycles)
   end
 end
 
+"""
+ bogomips(verbose=false)
+ Compute bogomips (see https://en.wikipedia.org/wiki/BogoMips )
+   . if verbose is true, print the result to stdout (and return nothing, in order not to pollute stdout in REPL)
+   . if verbose is false (default), return computed bogomips value
+"""
 function bogomips(verbose=false)
   if verbose
-    print("Calibrating delay loop.. ")
+    print("Calibrating delay loop..")
+    print("(on cpu $cur_cpu)")
   end
-  # if cur_cpucycle == 0
-      init_cpucycle(verbose)
-  # end
   loops_to_do=1
   done=false
   success=false
@@ -57,19 +62,26 @@ function bogomips(verbose=false)
       done = true
       loops_per_sec = (loops_to_do / dtsec)
       bogo = loops_per_sec / 500_000
+	  # bogo=round(bogo,digits=2)
       if verbose
-        @printf("ok - %.2f bogomips\n", bogomips)
+        @printf("..ok - %.0f bogomips\n", bogo)
+		return nothing
+	  else
+	    return bogo
       end
-      return bogo
     end
     la = loops_to_do
     loops_to_do = 2 * loops_to_do
     if loops_to_do < la ; done=true; end
-  end
+  end # while !done
   if !success
-    @warning "bogomips failed : $dtsec secs)"
+    @warn "bogomips failed : looptodo is $loops_to_do, la is $la; loop took $dtsec secs)"
   end
   return bogo
+end
+
+function __init__()
+  initGhz()
 end
 
 end # module
