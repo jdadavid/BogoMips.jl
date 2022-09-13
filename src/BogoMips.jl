@@ -72,4 +72,4 @@ function bogomips(verbose=false)
   return bogo
 end
 
-end
+end # module
