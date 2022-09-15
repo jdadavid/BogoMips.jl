@@ -10,7 +10,7 @@ curcpu=1
 for i = eachindex(the_cpu_info)
   global curcpu
   if the_cpu_info[i].speed > the_cpu_info[curcpu].speed
-    curcpu=i
+    curcpu=1
   end # if
 end # for
 print("(on cpu $curcpu)")
