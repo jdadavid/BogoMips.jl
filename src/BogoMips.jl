@@ -7,14 +7,56 @@ using Printf
 # using CpuId: cpucycle
 # cupcyclejl() = CpuId.cpucycle()
 
-alwaysinitGhz=true;
+alwaysinit=true;
+function setalwaysinit(); return alwaysinit ; end
+function setalwaysinit(b::Bool); ba=alwaysinit; global alwaysinit=b; return ba end
 
-cpuGhz = nothing;
-cur_cpu = nothing;
-cpuGhzmin = 0;
-cpumin=1;
-cpumax=1;
-cpuGhzmax = nothing;
+the_cpu_info=nothing
+ncpus=0
+speeds=Vector{Int32}(undef,ncpus)
+tusr=Vector{UInt64}(undef,ncpus)
+ttot=Vector{UInt64}(undef,ncpus)
+cpumin=nothing
+cpumax=nothing
+MHzmax=nothing
+cpucur=1
+
+function init_cpuinfo()
+	global the_cpu_info,ncpus,speeds,tusr,ttot,cpumin,cpumax,MHzmax
+	the_cpu_info=Sys.cpu_info()
+	ncpus=length(the_cpu_info)
+	speeds=Vector{Int32}(undef,ncpus)
+	tusr=Vector{UInt64}(undef,ncpus)
+	ttot=Vector{UInt64}(undef,ncpus)
+	for i in eachindex(the_cpu_info)
+		speeds[i]=the_cpu_info[i].speed
+		
+		tusr[i]=the_cpu_info[i].cpu_times!user
+		ttot[i]=tusr[i]
+		ttot[i]=ttot[i]+the_cpu_info[i].cpu_times!sys
+		ttot[i]=ttot[i]+the_cpu_info[i].cpu_times!nice
+		ttot[i]=ttot[i]+the_cpu_info[i].cpu_times!irq
+		# ttot[i]=ttot[i]+the_cpu_info[i].cpu_times!idle
+	end
+	_     ,cpumin =findmin(speeds)
+	MHzmax,cpumax =findmax(speeds)
+	nothing
+end
+
+function getcpucur(); cpucur;end
+function setcpucur()
+	global cpucur
+	cpucur=1
+end
+	
+	
+init_cpuinfo()
+setcpucur()
+
+
+cpuGHz() = cpuMHz()*0.001
+cpuMHz() = 0.001*speeds[cpucur]
+
 
 # function fib, for small workload (fib(20): ~5mus) and heavy workload (fib(30): ~5ms on my Ryzen 5 3500U)
 #   n      fib_value  time(mus)
@@ -34,25 +76,10 @@ function fib(n)
     return fib(n - 1) + fib(n - 2)
 end
 
-function initGhz(verbose=false)
-  global cur_cpu
-  global cpuGhz
-  the_cpu_info=Sys.cpu_info()
-  cur_cpu=firstindex(the_cpu_info)
-  for i = eachindex(the_cpu_info)
-    if the_cpu_info[i].speed > the_cpu_info[cur_cpu].speed
-      cur_cpu=i
-    end # if
-  end # for
-  cpuMhz = the_cpu_info[cur_cpu].speed
-  cpuGhz = cpuMhz*0.001
-  if verbose; println("initGhz : $(round(cpuGhz,digits=1)) Ghz on cpu $cur_cpu."); end
-end
+cpucycleMhzx() = convert(UInt64,floor(0.001*time_ns()*speeds[cpumax]))
+cpucyclecur()  = convert(UInt64,floor(0.001*time_ns()*speeds[cpucur]))
 
-function 
-
-cpucycleGhz() = convert(UInt64,floor(time_ns()*cpuGhz))
-cpucyclejl = cpucycleGhz
+cpucyclejl() = cpucyclecur()
 
 function delayrt(cycles)
   c0=cpucyclejl()
@@ -70,12 +97,11 @@ end
    . if verbose is false (default), return computed bogomips value
 """
 function bogomips(verbose=false)
-  if alwaysinitGhz
-    initGhz(verbose)
-  end
+  # if alwaysinit; initGhz(verbose); end
+  if alwaysinit; init_cpuinfo(); end
   if verbose
     print("Calibrating delay loop..")
-    print("(cpu$(cur_cpu)@$(round(cpuGhz,digits=1))Ghz)..")
+    print("(cpu$(cpucur)@$(round(cpuGHz(),digits=1))Ghz)..")
   end
   loops_to_do=1
   done=false
@@ -110,9 +136,48 @@ function bogomips(verbose=false)
   return bogo
 end
 
+# Grabbed from ThreadPinning.jl/querying.jl
+"""
+Returns the ID of the CPU on which the calling thread
+is currently executing.
+See `sched_getcpu` for more information.
+"""
+getcpuid() = Int(sched_getcpu())
+
+# """
+# Returns the ID of the CPU on which the given Julia thread
+# (`threadid`) is currently executing.
+# """
+# getcpuid(threadid::Integer) = fetch(@tspawnat threadid getcpuid())
+
+# """
+# Returns the ID of the CPUs on which the Julia threads
+# are currently running.
+# See `getcpuid` for more information.
+# """
+# function getcpuids()
+    # nt = nthreads()
+    # cpuids = zeros(Int, nt)
+    # @threads :static for tid in 1:nt
+        # cpuids[tid] = getcpuid()
+    # end
+    # return cpuids
+# end
+# Grabbed from ThreadPinning.jl/libuv.jl
+# ------------ uv.h ------------
+# Documentation:
+# https://github.com/clibs/uv/blob/master/docs/src/threading.rst
+const uv_thread_t = Culong # = pthread_t
+
+"""
+Ref: [docs](https://github.com/clibs/uv/blob/d0240ce496fcd86d45e8a6b211732220fdb27eac/docs/src/threading.rst#L130)
+"""
+uv_thread_self() = @ccall uv_thread_self()::uv_thread_t
+# End Grabbed
+
 function __init__()
-  initGhz()
-  # cpucyclejl=cupcycleGhz1;
+  init_cpuinfo()
+  setcpucur()
 end
 
 end # module
