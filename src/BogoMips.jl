@@ -11,6 +11,28 @@ alwaysinitGhz=true;
 
 cpuGhz = nothing;
 cur_cpu = nothing;
+cpuGhzmin = 0;
+cpumin=1;
+cpumax=1;
+cpuGhzmax = nothing;
+
+# function fib, for small workload (fib(20): ~5mus) and heavy workload (fib(30): ~5ms on my Ryzen 5 3500U)
+#   n      fib_value  time(mus)
+#  20         10_946         40
+#  25        121_393        431
+#  30      1_346_269      4_957
+#  35     14_930_352     53_998
+#  40    165_580_141    635_562
+#  41    267_914_296  1_042_420
+#  42    433_494_437  1_737_908
+#  43    701_408_733  2_869_705
+#  44  1_134_903_170  4_448_693
+#  45  1_836_311_903  7_227_998
+
+function fib(n)
+    if n <= 1 return 1 end
+    return fib(n - 1) + fib(n - 2)
+end
 
 function initGhz(verbose=false)
   global cur_cpu
@@ -27,7 +49,10 @@ function initGhz(verbose=false)
   if verbose; println("initGhz : $(round(cpuGhz,digits=1)) Ghz on cpu $cur_cpu."); end
 end
 
-cpucyclejl() = convert(UInt64,floor(time_ns()*cpuGhz))
+function 
+
+cpucycleGhz() = convert(UInt64,floor(time_ns()*cpuGhz))
+cpucyclejl = cpucycleGhz
 
 function delayrt(cycles)
   c0=cpucyclejl()
@@ -87,6 +112,7 @@ end
 
 function __init__()
   initGhz()
+  # cpucyclejl=cupcycleGhz1;
 end
 
 end # module
