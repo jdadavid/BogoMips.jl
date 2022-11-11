@@ -44,9 +44,12 @@ function init_cpuinfo()
 end
 
 function getcpucur(); cpucur;end
-function setcpucur()
+function setcpucur(c)
 	global cpucur
-	cpucur=1
+	cpucur=c
+end
+function setcpucur()
+	setcpucur(1)
 end
 	
 	
